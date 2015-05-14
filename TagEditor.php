@@ -40,6 +40,6 @@ class TagEditor extends InputWidget {
         $view->registerJs("jQuery('#$id').tagEditor($teOpts);");
 
         return $this->hasModel() ? Html::activeTextInput($this->model, $this->attribute, $this->options)
-            : Html::textInput($this->name, $this->value);
+            : Html::textInput($this->name, $this->value, $this->options);
     }
 }
