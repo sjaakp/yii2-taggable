@@ -1,0 +1,24 @@
+{
+    "name": "sjaakp/yii2-taggable",
+    "description": "Manage tags of ActiveRecord in Yii2.",
+    "keywords": ["yii", "yii2", "extension", "widget", "behavior", "tag", "tags"],
+    "type": "yii2-extension",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sjaak Priester",
+            "email": "sjaak@sjaakpriester.nl",
+            "homepage": "http://sjaakpriester.nl"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "*",
+        "yiisoft/yii2-jui": "*",
+        "bower-asset/jquery-tag-editor": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "sjaakp\\taggable\\": ""
+        }
+    }
+}
