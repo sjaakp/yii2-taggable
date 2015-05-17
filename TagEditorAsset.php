@@ -17,6 +17,9 @@ class TagEditorAsset extends AssetBundle {
     public $css = [
         'jquery.tag-editor.css'
     ];
+    public $js = [
+        'jquery.caret.min.js'
+    ];
     public $depends = [
         'yii\jui\JuiAsset',
     ];
