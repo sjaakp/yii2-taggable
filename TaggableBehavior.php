@@ -1,7 +1,7 @@
 <?php
 /**
  * MIT licence
- * Version 1.0
+ * Version 1.0.1
  * Sjaak Priester, Amsterdam 13-05-2015.
  *
  * ActiveRecord Behavior for Yii 2.0
@@ -154,7 +154,7 @@ class TaggableBehavior extends Behavior {
 
         // old tag models indexed by name
         $oldTagModels = ArrayHelper::index($this->getTags()->all(), $this->nameAttribute);
-        $newTags = explode($this->editorDelimiter, $tagList);
+        $newTags = empty($tagList) ? [] : explode($this->editorDelimiter, $tagList);
         $newTagModels = [];
 
         foreach ($newTags as $newTag)   {
