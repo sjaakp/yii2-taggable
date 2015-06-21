@@ -34,6 +34,7 @@ Suppose we have a class (ActiveRecord) `Article` of articles which can be tagged
 
 Tag has at least the following attributes:
 
+- `id`: primary key;
 - `name`: to hold the actual tag keyword;
 - `count`: to hold the number of `Article`'s associated with this tag.
 
@@ -44,6 +45,8 @@ Tag has at least the following attributes:
 - `model_id`: holds the primary key of an `Article`;
 - `tag_id`: holds the primary key of a `Tag`;
 - `ord`: holds the sorting order of a `Tag`.
+
+(do not set a primay key with equal name to primary key of Tag table.)
 
 #### TaggableBehavior ####
 
