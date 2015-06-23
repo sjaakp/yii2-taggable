@@ -59,6 +59,14 @@ The class `Article` should be set up like this:
 	use sjaakp\taggable\TaggableBehavior;
 
 	class Article extends ActiveRecord    {
+	
+	public function rules()
+	{
+		return [
+			// ...
+			[['editorTags'], 'safe'],
+		];
+	}
 
     	public function behaviors()
     	{
