@@ -46,17 +46,18 @@ class TagBehavior extends Behavior  {
     public $linkRoute = 'tag/view';
 
     /**
+     * @param $options array: link options
      * @return string
      * HTML of link to view of Tag (or any other destination, dependent of $linkRoute).
      */
-    public function getLink()   {
+    public function getLink($options = [])   {
         /**
          * @var $owner ActiveRecord
          */
         $owner = $this->owner;
         $tpk = current($owner::primaryKey());
 
-        return Html::a($owner->getAttribute($this->nameAttribute), [ $this->linkRoute, $tpk => $owner->primaryKey]);
+        return Html::a($owner->getAttribute($this->nameAttribute), [ $this->linkRoute, $tpk => $owner->primaryKey], $options);
     }
 
     public function events()    {

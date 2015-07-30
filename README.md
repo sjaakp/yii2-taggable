@@ -40,7 +40,7 @@ Tag has at least the following attributes:
 
 #### Junction table ####
 
-`Article` and `Tag` are linked with a junction table in a many-to-may relation. Let's call the table `article_tag`. It has the following fields:
+`Article` and `Tag` are linked with a junction table in a many-to-many relation. Let's call the table `article_tag`. It has the following fields:
 
 - `model_id`: holds the primary key of an `Article`;
 - `tag_id`: holds the primary key of a `Tag`;

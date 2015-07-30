@@ -71,9 +71,15 @@ class TaggableBehavior extends Behavior {
 
     /**
      * @var string
-     * Text (or HTML) delimiter between items returned from get TagLinks.
+     * Text (or HTML) delimiter between items returned from getTagLinks.
      */
     public $linkGlue = ', ';
+
+    /**
+     * @var array
+     * Options for the links returned from getTagLinks.
+     */
+    public $linkOptions = [];
 
     /**
      * @var string
@@ -115,10 +121,10 @@ class TaggableBehavior extends Behavior {
         $links = [];
 
         /**
-         * @var $tagModel ActiveRecord
+         * @var $tagModel TagBehavior
          */
         foreach ($this->getTags()->all() as $tagModel)    {
-            $links[] = $tagModel->link;
+            $links[] = $tagModel->getLink($this->linkOptions);
         }
 
         return implode($this->linkGlue, $links);
