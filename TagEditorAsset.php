@@ -23,6 +23,9 @@ class TagEditorAsset extends AssetBundle {
     public $depends = [
         'yii\jui\JuiAsset',
     ];
+    public $publishOptions = [
+        'except' => [ '*.html', '*.md', '*.json' ]
+    ];
 
     public function init()    {
         parent::init();
