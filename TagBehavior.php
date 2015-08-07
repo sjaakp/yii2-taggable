@@ -44,6 +44,14 @@ class TagBehavior extends Behavior  {
      * Route part of the link address returned in getLink().
      */
     public $linkRoute = 'tag/view';
+    
+    /**
+     * @var string
+     * Route param for tag
+     */
+    public $linkParam = null;
+    
+    public $linkAttr = "primaryKey";
 
     /**
      * @param $options array: link options
@@ -55,9 +63,9 @@ class TagBehavior extends Behavior  {
          * @var $owner ActiveRecord
          */
         $owner = $this->owner;
-        $tpk = current($owner::primaryKey());
+        $tpk = $this->linkParam ?: current($owner::primaryKey());
 
-        return Html::a($owner->getAttribute($this->nameAttribute), [ $this->linkRoute, $tpk => $owner->primaryKey], $options);
+        return Html::a($owner->getAttribute($this->nameAttribute), [ $this->linkRoute, $tpk => $owner->{$this->linkAttr}], $options);
     }
 
     public function events()    {
