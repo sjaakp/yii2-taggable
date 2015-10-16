@@ -21,7 +21,6 @@ use yii\db\ActiveQuery;
 use yii\db\Expression;
 use yii\helpers\ArrayHelper;
 
-
 class TaggableBehavior extends Behavior {
 
     /**
@@ -138,12 +137,38 @@ class TaggableBehavior extends Behavior {
         return implode($this->editorDelimiter, ArrayHelper::getColumn($this->getTags()->all(), $this->nameAttribute));
     }
 
+    protected $_tagList = '';
+
     /**
      * @param $tagList
-     * @throws \yii\db\Exception
      * Set value from TagEditor
      */
     public function setEditorTags($tagList)   {
+        $this->_tagList = $tagList;
+    }
+
+    protected function updateCounters($keys, $incr) {
+        if ($this->countAttribute)  {
+            /**
+             * @var $tc ActiveRecord
+             */
+            $tc = $this->tagClass;
+            $pk = current($tc::primaryKey());
+
+            $tc::updateAllCounters([$this->countAttribute => $incr], ['in', $pk, $keys]);
+        }
+    }
+
+
+    public function events()    {
+        return [
+            ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
+            ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
+            ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
+        ];
+    }
+
+    public function afterSave($event)   {
         /**
          * @var $owner ActiveRecord
          */
@@ -160,7 +185,7 @@ class TaggableBehavior extends Behavior {
 
         // old tag models indexed by name
         $oldTagModels = ArrayHelper::index($this->getTags()->all(), $this->nameAttribute);
-        $newTags = empty($tagList) ? [] : explode($this->editorDelimiter, $tagList);
+        $newTags = empty($this->_tagList) ? [] : explode($this->editorDelimiter, $this->_tagList);
         $newTagModels = [];
 
         foreach ($newTags as $newTag)   {
@@ -220,26 +245,6 @@ class TaggableBehavior extends Behavior {
                 next($newTagModels);
             }
         }
-
-    }
-
-    protected function updateCounters($keys, $incr) {
-        if ($this->countAttribute)  {
-            /**
-             * @var $tc ActiveRecord
-             */
-            $tc = $this->tagClass;
-            $pk = current($tc::primaryKey());
-
-            $tc::updateAllCounters([$this->countAttribute => $incr], ['in', $pk, $keys]);
-        }
-    }
-
-
-    public function events()    {
-        return [
-            ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
-        ];
     }
 
     public function beforeDelete($event)  {
