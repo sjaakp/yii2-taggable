@@ -1,7 +1,7 @@
 <?php
 /**
  * MIT licence
- * Version 1.0.1
+ * Version 1.0.2
  * Sjaak Priester, Amsterdam 13-05-2015.
  *
  * ActiveRecord Behavior for Yii 2.0

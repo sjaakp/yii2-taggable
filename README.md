@@ -1,7 +1,7 @@
 yii2-taggable
 =============
 
-#### Manage tags of ActiveRecords in PHP-framework YII 2.0 ####
+#### Manage tags of ActiveRecords in PHP-framework Yii 2.0 ####
 
 This package contains five classes to handle the tagging of ActiveRecords with keywords or similar. The tags can be associated with or decoupled from a model (ActiveRecord), and can be sorted. Tags are manipulated with the excellent [jQuery tagEditor developed by Pixabay](http://goodies.pixabay.com/jquery/tag-editor/demo.html).
 
@@ -42,11 +42,11 @@ Tag has at least the following attributes:
 
 `Article` and `Tag` are linked with a junction table in a many-to-many relation. Let's call the table `article_tag`. It has the following fields:
 
-- `model_id`: holds the primary key of an `Article`;
-- `tag_id`: holds the primary key of a `Tag`;
+- `model_id`: holds the primary key value of an `Article`;
+- `tag_id`: holds the primary key value of a `Tag`;
 - `ord`: holds the sorting order of a `Tag`.
 
-(do not set a primay key with equal name to primary key of Tag table.)
+(do not set a primary key with equal name to primary key of Tag table.)
 
 #### TaggableBehavior ####
 
@@ -111,7 +111,7 @@ Class `Tag` looks something like this:
 		// ...
 	}
 
-We've also defined a class method `getArticles()` to retrieve a query for the associated `Article`s. Refer to the [YII2 documentation](http://www.yiiframework.com/doc-2.0/yii-db-activequery.html#viaTable()-detail).
+We've also defined a class method `getArticles()` to retrieve a query for the associated `Article`s. Refer to the [Yii2 documentation](http://www.yiiframework.com/doc-2.0/yii-db-activequery.html#viaTable()-detail).
 
 #### Article view ####
 
