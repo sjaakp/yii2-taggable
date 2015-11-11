@@ -106,9 +106,11 @@ class TaggableBehavior extends Behavior {
 
         $tkn = new Expression($owner->getDb()->quoteSql("[[j]].{{{$this->tagKeyAttribute}}}"));
 
-        return $tc::find()->innerJoin($this->junctionTable . ' j', [ $tpk => $tkn ])
-            ->where(['j.' . $this->modelKeyAttribute => $ownerPk])
-            ->orderBy('j.' . $this->orderAttribute);
+        $result = $tc::find()->innerJoin($this->junctionTable . ' j', [ $tpk => $tkn ])
+            ->where(['j.' . $this->modelKeyAttribute => $ownerPk]);
+        if($this->orderAttribute) $result->orderBy('j.' . $this->orderAttribute);
+
+        return $result;
     }
 
 
