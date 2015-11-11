@@ -1,5 +1,5 @@
 {
-    "name": "sjaakp/yii2-taggable",
+    "name": "griven/yii2-taggable",
     "description": "Manage tags of ActiveRecord in Yii2.",
     "keywords": ["yii", "yii2", "extension", "widget", "behavior", "tag", "tags"],
     "type": "yii2-extension",
