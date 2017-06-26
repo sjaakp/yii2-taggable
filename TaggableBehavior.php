@@ -102,7 +102,7 @@ class TaggableBehavior extends Behavior {
          * @var $tc ActiveRecord
          */
         $tc = $this->tagClass;
-        $tpk = current($tc::primaryKey());
+        $tpk = $tc::tableName() . '.' . current($tc::primaryKey());
 
         $tkn = new Expression($owner->getDb()->quoteSql("[[j]].{{{$this->tagKeyAttribute}}}"));
 
