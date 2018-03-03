@@ -24,7 +24,7 @@ The preferred way to install **yii2-taggable** is through [Composer](https://get
 
 Or run:
 
-`$ php composer.phar require sjaakp/yii2-taggable "*"` 
+`composer require sjaakp/yii2-taggable "*"` 
 
 You can manually install **yii2-taggable** by [downloading the source in ZIP-format](https://github.com/sjaakp/yii2-taggable/archive/master.zip).
 
@@ -72,8 +72,8 @@ The class `Article` should be set up like this:
     	{
 	        return [
 	            'taggable' => [
-	                'class' => TaggableBehavior::className(),
-	                'tagClass' => Tag::className(),
+	                'class' => TaggableBehavior::class,
+	                'tagClass' => Tag::class,
 	                'junctionTable' => 'article_tag',
 	            ]
 	        ];
@@ -97,14 +97,14 @@ Class `Tag` looks something like this:
     	{
 	        return [
 	            'tag' => [
-	                'class' => TagBehavior::className(),
+	                'class' => TagBehavior::class,
 	                'junctionTable' => 'article_tag',
 	            ]
 	        ];
 	    }
 
 	    public function getArticles() {
-	        return $this->hasMany(Article::className(), [ 'id' => 'model_id' ])
+	        return $this->hasMany(Article::class, [ 'id' => 'model_id' ])
 	            ->viaTable('article_tag', [ 'tag_id' => 'id' ]);
 	    }
 
@@ -151,8 +151,8 @@ To make creating and updating `Tag`s possible, we also have to set up `TagContro
 	    public function actions()    {
 	        return [
 	            'suggest' => [
-	                'class' => TagSuggestAction::className(),
-	                'tagClass' => Tag::className(),
+	                'class' => TagSuggestAction::class,
+	                'tagClass' => Tag::class,
 	            ],
 	        ];
 	    }
@@ -177,7 +177,7 @@ In the `Article`'s update and create views we can now use the **TagEditor** widg
 	?>
 		...
 
-	    <?= $form->field($model, 'editorTags')->widget(TagEditor::className(), [
+	    <?= $form->field($model, 'editorTags')->widget(TagEditor::class, [
 	        'tagEditorOptions' => [
 	            'autocomplete' => [
 	                'source' => Url::toRoute(['tag/suggest'])
