@@ -87,6 +87,13 @@ class TaggableBehavior extends Behavior {
     public $editorDelimiter = ',';
 
     /**
+     * @var bool
+     * TRUE for creating automatically new tags when typed on object
+     * FALSE allows the usage only of existing tags
+     */
+    public $autoCreateTags = true;
+
+    /**
      * @return ActiveQuery
      * ActiveQuery to query for associated Tags.
      */
@@ -135,6 +142,14 @@ class TaggableBehavior extends Behavior {
      */
     public function getEditorTags()   {
         return implode($this->editorDelimiter, ArrayHelper::getColumn($this->getTags()->all(), $this->nameAttribute));
+    }
+
+    /**
+     * @return string
+     * Get instant value for TagEditor
+     */
+    public function getEditorTagsNow ()   {
+        return $this->_tagList;
     }
 
     protected $_tagList = '';
@@ -198,9 +213,14 @@ class TaggableBehavior extends Behavior {
                  */
                 $tag = $tc::findOne([$this->nameAttribute => $newTag]); // is new tag in database?
                 if (! $tag)   {                                         // no, create
-                    $tag = new $tc();
-                    $tag->setAttribute($this->nameAttribute, $newTag);
-                    $tag->save();
+                    if ($this->autoCreateTags) {
+                        $tag = new $tc();
+                        $tag->setAttribute($this->nameAttribute, $newTag);
+                        $tag->save();
+                    } else {
+                        // not adding automatically tags wich are not already in DB
+                        continue;
+                    }
                 }
                 $newTagModels[$newTag] = $tag;
             }
