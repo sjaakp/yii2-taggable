@@ -180,7 +180,12 @@ class TaggableBehavior extends Behavior {
             ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
             ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
             ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
+            ActiveRecord::EVENT_AFTER_FIND => 'afterFind',
         ];
+    }
+
+    public function afterFind()     {
+        $this->_tagList = $this->getEditorTags();
     }
 
     public function afterSave($event)   {
