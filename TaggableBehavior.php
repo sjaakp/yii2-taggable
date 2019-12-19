@@ -1,274 +1,232 @@
 <?php
 /**
- * MIT licence
- * Version 1.0.2
- * Sjaak Priester, Amsterdam 13-05-2015.
+ * sjaakp/yii2-taggable
+ * ----------
+ * Manage tags of ActiveRecords in PHP-framework Yii 2.x
+ * Version 2.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/yii2-taggable
+ * https://sjaakpriester.nl
  *
- * ActiveRecord Behavior for Yii 2.0
+ * Behavior for Yii 2.x ActiveRecords
  *
- * Makes an ActiveRecord taggable.
- *
- * TaggableBehavior links an ActiveRecord to one or more Tag ActiveRecords via a junction table (many-to-many).
- *
+ * Adds tags to record.
  */
-
 
 namespace sjaakp\taggable;
 
 use yii\base\Behavior;
 use yii\db\ActiveRecord;
-use yii\db\ActiveQuery;
 use yii\db\Expression;
-use yii\helpers\ArrayHelper;
+use yii\validators\Validator;
+use yii\helpers\Html;
+use yii\helpers\Inflector;
 
-class TaggableBehavior extends Behavior {
-
+/**
+ * Class TaggableBehavior
+ * @package sjaakp\taggable
+ */
+class TaggableBehavior extends Behavior
+{
     /**
-     * @var string
-     * The (full) class name of the Tag class.
+     * @var ActiveRecord class name of the tag record
      */
     public $tagClass;
 
     /**
-     * @var string
-     * The name attribute of the Tag class.
+     * @var string attribute in the tag table
      */
     public $nameAttribute = 'name';
 
     /**
-     * @var string|boolean
-     * - if string: the count attribute of the Tag class, holds the number of associated ActiveRecords;
-     * - if false: no such attribute; associated ActiveRecords are not counted in Tag class
-     */
-    public $countAttribute = 'count';
-
-    /**
-     * @var string
-     * Table name of the junction table
+     * @var string name of the junction table. Should be set.
      */
     public $junctionTable;
 
     /**
-     * @var string
-     * The name of the foreign key attribute in $junctionTable that holds the primary key of the Tag.
+     * @var string column names in the junction table
      */
-    public $tagKeyAttribute = 'tag_id';
+    public $tagKeyColumn = 'tag_id';
+    public $modelKeyColumn = 'model_id';
+    public $orderKeyColumn = 'ord';
 
     /**
-     * @var string
-     * The name of the foreign key attribute in $junctionTable that holds the primary key of the owner ActiveRecord.
+     * @var string delimiter used in TagEditor
      */
-    public $modelKeyAttribute = 'model_id';
+    public $delimiter = ',';
 
     /**
-     * @var string|boolean
-     * - if string: name of the attribute in $junctionTable where the sorting order is maintained;
-     * - if false: no such attribute; Tags can not be sorted
-     *
+     * @var string separator between tag links
      */
-    public $orderAttribute = 'ord';
+    public $separator = ', ';
 
     /**
-     * @var string
-     * Text (or HTML) delimiter between items returned from getTagLinks.
+     * @var null|callable function($tag) returning tag link based on $tag
+     * If null (default): return simple HTML link.
      */
-    public $linkGlue = ', ';
+    public $renderLink;
 
     /**
-     * @var array
-     * Options for the links returned from getTagLinks.
+     * @inheritdoc
+     * @param $owner ActiveRecord
+     * @link https://github.com/yiisoft/yii2/issues/5438
+     * Actually, we should have a detach() too...
      */
-    public $linkOptions = [];
+    public function attach($owner)
+    {
+        parent::attach($owner);
+        $validators = $owner->validators;
+        $validator = Validator::createValidator('safe', $owner, 'tags');
+        $validators[] = $validator;
+    }
 
     /**
-     * @var string
-     * Character used as delimiter in TagEditor.
+     * @return \yii\db\ActiveQuery
      */
-    public $editorDelimiter = ',';
-
-    /**
-     * @return ActiveQuery
-     * ActiveQuery to query for associated Tags.
-     */
-    public function getTags()   {
+    public function getTagModels()
+    {
         // Cannot use hasMany()->viaTable() here because the result cannot be ordered.
-        /**
-         * @var $owner ActiveRecord
-         */
+        /* @var $owner ActiveRecord */
         $owner = $this->owner;
-        $ownerPk = $owner->primaryKey;
+        $modelPk = $owner->primaryKey;  // value
 
-        /**
-         * @var $tc ActiveRecord
-         */
         $tc = $this->tagClass;
-        $tpk = current($tc::primaryKey());
+        $tpk = $tc::primaryKey()[0];  // tag pk name
 
-        $tkn = new Expression($owner->getDb()->quoteSql("[[j]].{{{$this->tagKeyAttribute}}}"));
+        $tkn = new Expression($owner->db->quoteSql("{{j}}.[[{$this->tagKeyColumn}]]"));
 
         return $tc::find()->innerJoin($this->junctionTable . ' j', [ $tpk => $tkn ])
-            ->where(['j.' . $this->modelKeyAttribute => $ownerPk])
-            ->orderBy('j.' . $this->orderAttribute);
+            ->where([ "j.{$this->modelKeyColumn}" => $modelPk ])
+            ->orderBy("j.{$this->orderKeyColumn}");
     }
 
+    /**
+     * @return string   tag names separated by delimiter, ready for TagEditor
+     */
+    public function getTags()
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+
+        $names = array_map(function($v) {
+            /* @var $v ActiveRecord */
+            return $v->getAttribute($this->nameAttribute);
+        }, $this->getTagModels()->all($owner->db));
+
+        return implode($this->delimiter, $names);
+    }
 
     /**
-     * @return string
-     * HTML of associated Tag-names, linked to Tag views.
+     * @param $tags string   tag names separated by delimiter, from TagEditor
+     * @throws \yii\db\Exception
      */
-    public function getTagLinks()   {
-        $links = [];
+    public function setTags($tags)
+    {
+        $this->removeTags();    // remove old tags, if any
+        $tc = $this->tagClass;
 
-        /**
-         * @var $tagModel TagBehavior
-         */
-        foreach ($this->getTags()->all() as $tagModel)    {
-            $links[] = $tagModel->getLink($this->linkOptions);
+        $ids = array_map(function($name) use ($tc) {
+            $tag = $tc::findOne([ $this->nameAttribute => $name ] ); // does tag exist?
+
+            if (is_null($tag))   {    // no, create
+                /* @var $tag ActiveRecord */
+                $tag = new $tc();
+                $tag->setAttribute($this->nameAttribute, $name);
+                $tag->save();
+            }
+            return $tag->primaryKey;
+        }, explode($this->delimiter, $tags));
+
+        $this->insertTags($ids);
+    }
+
+    /**
+     * @return string   tag names as links, separated by separator
+     * @throws \ReflectionException
+     */
+    public function getTagLinks()
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+        $ctrl = Inflector::camel2id((new \ReflectionClass($this->tagClass))->getShortName());
+
+        $links = array_map(function($tag) use($ctrl) {
+            /* @var $tag ActiveRecord */
+            return is_null($this->renderLink) ? Html::a($tag->getAttribute($this->nameAttribute), [ "/$ctrl/view", 'id' => $tag->primaryKey ] )
+                : call_user_func($this->renderLink, $tag);
+        }, $this->getTagModels()->all($owner->db));
+
+        return implode($this->separator, $links);
+    }
+
+    /**
+     * Remove owner's tag links from junction table, if any
+     * @throws \yii\db\Exception
+     * @return int number of rows affected
+     */
+    protected function removeTags()
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+        $db = $owner->db;
+        $modelPk = $owner->primaryKey;  // value
+
+        return $db->createCommand()->delete($this->junctionTable, [
+            $this->modelKeyColumn => $modelPk
+        ])->execute();
+    }
+
+    /**
+     * @param $tagIds
+     * @throws \yii\db\Exception
+     * @return int number of rows affected
+     */
+    protected function insertTags($tagIds)
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+        $db = $owner->db;
+        $modelPk = $owner->primaryKey;  // value
+
+        $rows = [];
+        $ord = 0;
+
+        foreach ($tagIds as $id)    {
+            $rows[] = [
+                $modelPk,
+                $id,
+                $ord
+            ];
+            $ord++;
         }
 
-        return implode($this->linkGlue, $links);
+        $sql = $db->queryBuilder->batchInsert($this->junctionTable, [
+            $this->modelKeyColumn,
+            $this->tagKeyColumn,
+            $this->orderKeyColumn
+        ], $rows);
+
+        return $db->createCommand($sql)->execute();
     }
 
     /**
-     * @return string
-     * Get value for TagEditor
+     * @inheritDoc
      */
-    public function getEditorTags()   {
-        return implode($this->editorDelimiter, ArrayHelper::getColumn($this->getTags()->all(), $this->nameAttribute));
-    }
-
-    protected $_tagList = '';
-
-    /**
-     * @param $tagList
-     * Set value from TagEditor
-     */
-    public function setEditorTags($tagList)   {
-        $this->_tagList = $tagList;
-    }
-
-    protected function updateCounters($keys, $incr) {
-        if ($this->countAttribute)  {
-            /**
-             * @var $tc ActiveRecord
-             */
-            $tc = $this->tagClass;
-            $pk = current($tc::primaryKey());
-
-            $tc::updateAllCounters([$this->countAttribute => $incr], ['in', $pk, $keys]);
-        }
-    }
-
-
-    public function events()    {
+    public function events()
+    {
         return [
             ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
-            ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
-            ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
         ];
     }
 
-    public function afterSave($event)   {
-        /**
-         * @var $owner ActiveRecord
-         */
-        $owner = $this->owner;
-        $ownerPk = $owner->primaryKey;
-
-        /**
-         * @var $tc ActiveRecord
-         */
-        $tc = $this->tagClass;
-        $tagPkName = current($tc::primaryKey());
-
-        $db = $owner->getDb();
-
-        // old tag models indexed by name
-        $oldTagModels = ArrayHelper::index($this->getTags()->all(), $this->nameAttribute);
-        $newTags = empty($this->_tagList) ? [] : explode($this->editorDelimiter, $this->_tagList);
-        $newTagModels = [];
-
-        foreach ($newTags as $newTag)   {
-            if (isset($oldTagModels[$newTag]))  {       // new tag is in old tag models as well
-                $newTagModels[$newTag] = $oldTagModels[$newTag];
-            }
-            else    {
-                /**
-                 * @var $tag ActiveRecord
-                 */
-                $tag = $tc::findOne([$this->nameAttribute => $newTag]); // is new tag in database?
-                if (! $tag)   {                                         // no, create
-                    $tag = new $tc();
-                    $tag->setAttribute($this->nameAttribute, $newTag);
-                    $tag->save();
-                }
-                $newTagModels[$newTag] = $tag;
-            }
-        }
-
-        $removeTagKeys = ArrayHelper::getColumn(array_diff_key($oldTagModels, $newTagModels), $tagPkName);
-        $addTagKeys = ArrayHelper::getColumn(array_diff_key($newTagModels, $oldTagModels), $tagPkName);
-
-        if (count($removeTagKeys))  {
-            $this->updateCounters($removeTagKeys, -1);
-            $db->createCommand()->delete($this->junctionTable, [
-                $this->tagKeyAttribute => $removeTagKeys,
-                $this->modelKeyAttribute => $ownerPk
-            ])->execute();
-        }
-
-        if (count($addTagKeys))  {
-            $this->updateCounters($addTagKeys, 1);
-            $rows = [];
-            foreach ($addTagKeys as $addTagKey) {
-                $rows[] = [ $addTagKey, $ownerPk ];
-            }
-            $db->createCommand()->batchInsert($this->junctionTable, [$this->tagKeyAttribute, $this->modelKeyAttribute], $rows)
-                ->execute();
-        }
-
-        if ($this->orderAttribute)  {
-            $iOrder = 0;
-            while (current($newTagModels)        // skip identical tags; order attribute is already set
-                && current($oldTagModels)
-                && key($newTagModels) == key($oldTagModels))       {
-                $iOrder++;
-                next($newTagModels);
-                next($oldTagModels);
-            }
-
-            while ($currentTag = current($newTagModels))    {
-                $db->createCommand()->update($this->junctionTable, [ $this->orderAttribute => $iOrder ],
-                    [ $this->tagKeyAttribute => $currentTag->primaryKey, $this->modelKeyAttribute => $ownerPk ])->execute();
-
-                $iOrder++;
-                next($newTagModels);
-            }
-        }
-    }
-
-    public function beforeDelete($event)  {
-        if ($this->countAttribute)  {
-            /**
-             * @var $tc ActiveRecord
-             */
-            $tc = $this->tagClass;
-            $pk = current($tc::primaryKey());
-
-            $keys = ArrayHelper::getColumn($this->getTags()->all(), $pk);
-
-            $tc::updateAllCounters([$this->countAttribute => -1], ['in', $pk, $keys]);
-        }
-
-        /**
-         * @var $owner ActiveRecord
-         */
-        $owner = $this->owner;
-        $db = $owner->getDb();
-
-        $db->createCommand()->delete($this->junctionTable, [
-            $this->modelKeyAttribute => $owner->primaryKey
-        ])->execute();
-
+    /**
+     * @param $event
+     * @throws \yii\db\Exception
+     */
+    public function beforeDelete($event)
+    {
+        $this->removeTags();
     }
 }

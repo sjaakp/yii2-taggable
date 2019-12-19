@@ -1,33 +1,41 @@
 <?php
 /**
- * MIT licence
- * Version 1.0
- * Sjaak Priester, Amsterdam 13-05-2015.
+ * sjaakp/yii2-taggable
+ * ----------
+ * Manage tags of ActiveRecords in PHP-framework Yii 2.x
+ * Version 2.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/yii2-taggable
+ * https://sjaakpriester.nl
  *
- * Input widget for Yii 2.0
+ * InputWidget for Yii 2.x
  *
- * Widget to enter, delete and interactively sort tags.
- *
- * Uses jQuery tagEditor.
- * @link http://goodies.pixabay.com/jquery/tag-editor/demo.html
- *
+ * Wrapper for jQuery tagEditor by PixaBay.
+ * @link https://goodies.pixabay.com/jquery/tag-editor/demo.html
  */
 
 namespace sjaakp\taggable;
 
-use yii\widgets\InputWidget;
 use yii\helpers\Html;
 use yii\helpers\Json;
+use yii\widgets\InputWidget;
 
-class TagEditor extends InputWidget {
-
+/**
+ * Class TagEditor
+ * @package sjaakp\taggable
+ */
+class TagEditor extends InputWidget
+{
     /**
      * @var array
-     * The Javascript options of the jQuery tagEditor widget.
+     * Options for the underlying jQuery tagEditor
      */
-    public $tagEditorOptions = [];
+    public $clientOptions = [];
 
-    public function run()   {
+    public function run()
+    {
         $view = $this->getView();
 
         $asset = new TagEditorAsset();
@@ -36,10 +44,11 @@ class TagEditor extends InputWidget {
         $id = $this->getId();
         $this->options['id'] = $id;
 
-        $teOpts = count($this->tagEditorOptions) ? Json::encode($this->tagEditorOptions) : '';
+        $teOpts = count($this->clientOptions) ? Json::encode($this->clientOptions) : '';
         $view->registerJs("jQuery('#$id').tagEditor($teOpts);");
 
         return $this->hasModel() ? Html::activeTextInput($this->model, $this->attribute, $this->options)
             : Html::textInput($this->name, $this->value, $this->options);
     }
+
 }

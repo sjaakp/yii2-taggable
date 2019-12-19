@@ -3,6 +3,10 @@ yii2-taggable
 
 #### Manage tags of ActiveRecords in PHP-framework Yii 2.0 ####
 
+[![Latest Stable Version](https://poser.pugx.org/sjaakp/yii2-taggable/v/stable)](https://packagist.org/packages/sjaakp/yii2-taggable)
+[![Total Downloads](https://poser.pugx.org/sjaakp/yii2-taggable/downloads)](https://packagist.org/packages/sjaakp/yii2-taggable)
+[![License](https://poser.pugx.org/sjaakp/yii2-taggable/license)](https://packagist.org/packages/sjaakp/yii2-taggable)
+
 This package contains five classes to handle the tagging of ActiveRecords with keywords or similar. The tags can be associated with or decoupled from a model (ActiveRecord), and can be sorted. Tags are manipulated with the excellent [jQuery tagEditor developed by Pixabay](http://goodies.pixabay.com/jquery/tag-editor/demo.html).
 
 The four main classes of **yii2-taggable** are:
@@ -14,7 +18,9 @@ The four main classes of **yii2-taggable** are:
 
 There is also a class **TagEditorAsset**, which is a helper class for TagEditor. 
 
-A demonstration of the **yii2-taggable** suit is [here](http://www.sjaakpriester.nl/software/taggable).
+A demonstration of the **yii2-taggable** suit is [here](https://sjaakpriester.nl/software/taggable).
+
+Notice that the API for version 2 is slightly different from that of version 1.
 
 ## Installation ##
 
@@ -36,21 +42,22 @@ Tag has at least the following attributes:
 
 - `id`: primary key;
 - `name`: to hold the actual tag keyword;
-- `count`: to hold the number of `Article`'s associated with this tag.
 
 #### Junction table ####
 
-`Article` and `Tag` are linked with a junction table in a many-to-many relation. Let's call the table `article_tag`. It has the following fields:
+`Article` and `Tag` are linked with a junction table in a many-to-many relation. 
+Let's call the table `article_tag`. It has the following fields:
 
 - `model_id`: holds the primary key value of an `Article`;
 - `tag_id`: holds the primary key value of a `Tag`;
 - `ord`: holds the sorting order of a `Tag`.
 
-(do not set a primary key with equal name to primary key of Tag table.)
+It doesn't need to have a primary key. It's a good idea to set indexes on both `model_id`
+and `tag_id`.
 
 #### TaggableBehavior ####
 
-The class `Article` should be set up like this:
+The class `Article` is *taggable*, and should be set up like this:
 
 	<?php
 
@@ -60,21 +67,13 @@ The class `Article` should be set up like this:
 
 	class Article extends ActiveRecord    {
 	
-	public function rules()
-	{
-		return [
-			// ...
-			[['editorTags'], 'safe'],
-		];
-	}
-
     	public function behaviors()
     	{
 	        return [
 	            'taggable' => [
 	                'class' => TaggableBehavior::class,
-	                'tagClass' => Tag::class,
 	                'junctionTable' => 'article_tag',
+	                'tagClass' => Tag::class,
 	            ]
 	        ];
 	    }
@@ -83,7 +82,7 @@ The class `Article` should be set up like this:
 
 #### TagBehavior ####
 
-Class `Tag` looks something like this:
+Class `Tag` behaves as a *tag*, and looks something like this:
 
 	<?php
 
@@ -99,19 +98,13 @@ Class `Tag` looks something like this:
 	            'tag' => [
 	                'class' => TagBehavior::class,
 	                'junctionTable' => 'article_tag',
+	                'modelClass' => Article::class,
 	            ]
 	        ];
 	    }
 
-	    public function getArticles() {
-	        return $this->hasMany(Article::class, [ 'id' => 'model_id' ])
-	            ->viaTable('article_tag', [ 'tag_id' => 'id' ]);
-	    }
-
 		// ...
 	}
-
-We've also defined a class method `getArticles()` to retrieve a query for the associated `Article`s. Refer to the [Yii2 documentation](http://www.yiiframework.com/doc-2.0/yii-db-activequery.html#viaTable()-detail).
 
 #### Article view ####
 
@@ -124,13 +117,11 @@ In the `Article` view we can now display the tags like so:
 	 * @var ap\models\Article $model
 	 */
 	?>
-	<div class="article-view">
 
-		<!-- Display article title and body here. -->
-		
-		<h4>Tags</h4>
-		<p><?= $model->tagLinks ?></p>
-	</div>
+    <!-- Display article title and body here. -->
+    
+    <h4>Tags</h4>
+    <p><?= $model->tagLinks ?></p>
 
 `tagLinks` is a new virtual attribute, added to `Article` by `TaggableBehavior`.
 
@@ -177,8 +168,8 @@ In the `Article`'s update and create views we can now use the **TagEditor** widg
 	?>
 		...
 
-	    <?= $form->field($model, 'editorTags')->widget(TagEditor::class, [
-	        'tagEditorOptions' => [
+	    <?= $form->field($model, 'tags')->widget(TagEditor::class, [
+	        'clientOptions' => [
 	            'autocomplete' => [
 	                'source' => Url::toRoute(['tag/suggest'])
 	            ],
@@ -186,15 +177,25 @@ In the `Article`'s update and create views we can now use the **TagEditor** widg
 	    ]) ?>
 		...
 
-`editorTags` is also a new virtual attribute of `Article`, added to it by TaggableBehavior. `'tag/suggest'` is the base of the route to the `suggest` action in `TagController`, which we defined before. Learn more about the `tagEditorOptions` from [Pixabay](http://goodies.pixabay.com/jquery/tag-editor/demo.html).
+`tags` is also a new virtual attribute of `Article`, added to it by TaggableBehavior. 
+`'tag/suggest'` is the base of the route to the `suggest` action in `TagController`, 
+which we defined before. Learn more about the `clientOptions` from [Pixabay](https://goodies.pixabay.com/jquery/tag-editor/demo.html).
 
 ## Modifications ##
 
-The basic setup of **yii2-taggable** can be modified in a number of ways. Refer to the source files to see which other options are available. Some are:
+The basic setup of **yii2-taggable** can be modified in a number of ways. 
+Refer to the source files to see which other options are available. Some are:
 
-- **$nameAttribute**: name attribute of the tag class. Defined in TagBehavior, TaggableBehavior, and TagSuggestAction. Default: `'name'`.
-- **$countAttribute**: count attribute of the tag class. Holds the number of associated models. Defined in TaggableBehavior. Default: `'count'`.
-- **$tagKeyAttribute** and **$modelKeyAttribute**: foreign key fields in the junction table. Defined in TagBehavior and TaggableBehavior. Defaults: `'tag_id'` and `'model_id'` respectively.
+- **$nameAttribute**: name attribute of the tag class. 
+  Defined in TaggableBehavior, and TagSuggestAction. Default: `'name'`.
+- **$tagKeyColumn** and **$modelKeyColumn**: foreign key fields in the junction table. 
+  Defined in TagBehavior and TaggableBehavior. 
+  Defaults: `'tag_id'` and `'model_id'` respectively.
+- **$orderColumn**: holds order information in the junction table. 
+  Defined in TaggableBehavior.
+- **$renderLink**: callable, `function($tag)`, returning the HTML code for a single
+  tag link. Defined by TaggableBehavior. If not set (default), TaggableBehaviour renders
+  tag links as a simple HTML a.
 
 
  

@@ -1,13 +1,18 @@
 <?php
 /**
- * MIT licence
- * Version 1.0
- * Sjaak Priester, Amsterdam 13-05-2015.
+ * sjaakp/yii2-taggable
+ * ----------
+ * Manage tags of ActiveRecords in PHP-framework Yii 2.x
+ * Version 2.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/yii2-taggable
+ * https://sjaakpriester.nl
  *
- * Action for Yii 2.0
+ * Action for Yii 2.x
  *
  * Handles autocomplete requests from TagEditor.
- *
  */
 
 namespace sjaakp\taggable;
@@ -17,7 +22,12 @@ use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Json;
 
-class TagSuggestAction extends Action {
+/**
+ * Class TagSuggestAction
+ * @package sjaakp\taggable
+ */
+class TagSuggestAction extends Action
+{
 
     /**
      * @var string

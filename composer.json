@@ -13,8 +13,7 @@
     ],
     "require": {
         "yiisoft/yii2": "*",
-        "yiisoft/yii2-jui": "*",
-        "bower-asset/jquery-tag-editor": "*"
+        "yiisoft/yii2-jui": "*"
     },
     "autoload": {
         "psr-4": {

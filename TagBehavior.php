@@ -1,94 +1,115 @@
 <?php
 /**
- * MIT licence
- * Version 1.0
- * Sjaak Priester, Amsterdam 13-05-2015.
+ * sjaakp/yii2-taggable
+ * ----------
+ * Manage tags of ActiveRecords in PHP-framework Yii 2.x
+ * Version 2.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/yii2-taggable
+ * https://sjaakpriester.nl
  *
- * ActiveRecord Behavior for Yii 2.0
+ * Behavior for Yii 2.x ActiveRecord
  *
- * Makes an ActiveRecord behave like a Tag.
- *
- * TagBehavior links an ActiveRecord to one or more Taggable ActiveRecords via a junction table (many-to-many).
- *
+ * Lets record act as tag.
  */
-
 
 namespace sjaakp\taggable;
 
 use yii\base\Behavior;
 use yii\db\ActiveRecord;
-use yii\helpers\Html;
 
-class TagBehavior extends Behavior  {
-
+/**
+ * Class TagBehavior
+ * @package sjaakp\taggable
+ */
+class TagBehavior extends Behavior
+{
     /**
-     * @var string
-     * The name attribute of the Tag class.
-     */
-    public $nameAttribute = 'name';
-
-    /**
-     * @var array|string
-     * Table name of the junction table, or array of multiple junction tables
+     * @var string name of the junction table. Should be set.
      */
     public $junctionTable;
 
     /**
-     * @var string
-     * The name of the attribute in $junctionTable that holds the primary key of the Tag.
+     * @var string column names in the junction table
      */
-    public $tagKeyAttribute = 'tag_id';
+    public $tagKeyColumn = 'tag_id';
+    public $modelKeyColumn = 'model_id';
 
     /**
-     * @var string
-     * Route part of the link address returned in getLink().
+     * @var ActiveRecord class name
      */
-    public $linkRoute = 'tag/view';
-    
-    /**
-     * @var string
-     * Route param for tag
-     */
-    public $linkParam = null;
-    
-    public $linkAttr = "primaryKey";
+    public $modelClass;
 
     /**
-     * @param $options array: link options
-     * @return string
-     * HTML of link to view of Tag (or any other destination, dependent of $linkRoute).
+     * @var array model class where() condition, format like QueryInterface::where()
+     * @link https://www.yiiframework.com/doc/api/2.0/yii-db-queryinterface#where()-detail
      */
-    public function getLink($options = [])   {
-        /**
-         * @var $owner ActiveRecord
-         */
+    public $condition = [];
+
+    public function getModels()
+    {
+        /** @var $owner ActiveRecord */
         $owner = $this->owner;
-        $tpk = $this->linkParam ?: current($owner::primaryKey());
+        $tagPk = $owner->primaryKey()[0];  // tag pk name
 
-        return Html::a($owner->getAttribute($this->nameAttribute), [ $this->linkRoute, $tpk => $owner->{$this->linkAttr}], $options);
+        $mc = $this->modelClass;
+        $modelPk = $mc::primaryKey()[0];  // model pk name
+
+        return $owner->hasMany($this->modelClass, [ $modelPk => $this->modelKeyColumn ])->where($this->condition)
+            ->viaTable($this->junctionTable, [ $this->tagKeyColumn => $tagPk ]);
     }
 
-    public function events()    {
+    /**
+     * @return int
+     * @throws \yii\db\Exception
+     */
+    public function getModelCount()
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+        $db = $owner->db;
+        if (empty($this->condition))    {   // if no condition, just count junctions (more efficient, I guess)
+            $tagPk = $owner->primaryKey;  // value
+
+            $sql = $db->quoteSql("SELECT COUNT(*) FROM {{%{$this->junctionTable}}} WHERE [[{$this->tagKeyColumn}]] = $tagPk");
+            return $db->createCommand($sql)->queryScalar();
+        }
+        return $this->getModels()->count('*', $db);
+    }
+
+    /**
+     * Remove tag's model links from junction table
+     * @throws \yii\db\Exception
+     * @return int number of rows affected
+     */
+    protected function removeModels()
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+
+        return $owner->db->createCommand()->delete($this->junctionTable, [
+            $this->tagKeyColumn => $owner->primaryKey   // value
+        ])->execute();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function events()
+    {
         return [
             ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
         ];
     }
 
-    public function beforeDelete($event)  {
-        /**
-         * @var $owner ActiveRecord
-         */
-        $owner = $this->owner;
-        $db = $owner->getDb();
-
-        if (is_string($this->junctionTable))    {
-            $this->junctionTable = [ $this->junctionTable ];
-        }
-
-        foreach ($this->junctionTable as $jt)   {
-            $db->createCommand()->delete($this->junctionTable, [
-                $this->tagKeyAttribute => $owner->primaryKey
-            ])->execute();
-        }
+    /**
+     * @param $event
+     * @throws \yii\db\Exception
+     */
+    public function beforeDelete($event)
+    {
+        $this->removeModels();
     }
 }
