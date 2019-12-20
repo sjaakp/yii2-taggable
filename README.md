@@ -125,9 +125,28 @@ In the `Article` view we can now display the tags like so:
 
 `tagLinks` is a new virtual attribute, added to `Article` by `TaggableBehavior`.
 
+All the `Tag`s can be retrieved with:
+
+    $allTags = $article->tagModels;
+    
+To get an [`ActiveQuery`](https://www.yiiframework.com/doc/api/2.0/yii-db-activequery),
+for instance to use in an [`ActiveDataProvider`](https://www.yiiframework.com/doc/api/2.0/yii-data-activedataprovider),
+use:
+
+    $provider = new ActiveDataProvider([
+        'query' => $article->getTagModels()
+    ]);
+
+If we want to know whether an `Article` has a `Tag` with a certain name, say 'politics',
+we can query the class like so:
+
+    if ($article->hasTag('politics'))   {
+        // ...
+    }
+
 #### Article update ####
 
-To make creating and updating `Tag`s possible, we also have to set up `TagController`:
+To make creating and updating `Tag`s easy, we also have to set up `TagController`:
 
 	<?php
 	
@@ -186,16 +205,16 @@ which we defined before. Learn more about the `clientOptions` from [Pixabay](htt
 The basic setup of **yii2-taggable** can be modified in a number of ways. 
 Refer to the source files to see which other options are available. Some are:
 
-- **$nameAttribute**: name attribute of the tag class. 
-  Defined in TaggableBehavior, and TagSuggestAction. Default: `'name'`.
-- **$tagKeyColumn** and **$modelKeyColumn**: foreign key fields in the junction table. 
+- **nameAttribute**: name attribute of the tag class. 
+  Defined in TagBehavior, TaggableBehavior, and TagSuggestAction. Default: `'name'`.
+- **tagKeyColumn** and **modelKeyColumn**: foreign key fields in the junction table. 
   Defined in TagBehavior and TaggableBehavior. 
   Defaults: `'tag_id'` and `'model_id'` respectively.
-- **$orderColumn**: holds order information in the junction table. 
+- **orderColumn**: holds order information in the junction table. 
   Defined in TaggableBehavior.
-- **$renderLink**: callable, `function($tag)`, returning the HTML code for a single
-  tag link. Defined by TaggableBehavior. If not set (default), TaggableBehaviour renders
-  tag links as a simple HTML a.
+- **renderLink**: callable, `function($tag)`, returning the HTML code for a single
+  tag link. Defined by TagBehavior. If not set (default), TagBehaviour renders
+  tag link as a simple HTML a.
 
 
  

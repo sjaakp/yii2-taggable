@@ -18,7 +18,10 @@
 namespace sjaakp\taggable;
 
 use yii\base\Behavior;
+use yii\base\InvalidConfigException;
 use yii\db\ActiveRecord;
+use yii\helpers\Html;
+use yii\helpers\Inflector;
 
 /**
  * Class TagBehavior
@@ -43,11 +46,41 @@ class TagBehavior extends Behavior
     public $modelClass;
 
     /**
+     * @var string attribute in the tag table
+     */
+    public $nameAttribute = 'name';
+
+    /**
+     * @var null|callable function($tag) returning tag link based on $tag
+     * If null (default): return simple HTML link.
+     */
+    public $renderLink;
+
+    /**
      * @var array model class where() condition, format like QueryInterface::where()
      * @link https://www.yiiframework.com/doc/api/2.0/yii-db-queryinterface#where()-detail
      */
     public $condition = [];
 
+    /**
+     * @inheritDoc
+     * @throws InvalidConfigException
+     */
+    public function init()
+    {
+        if (is_null($this->junctionTable))   {
+            throw new InvalidConfigException('TagBehavior: property "junctionTable" is not set.');
+        }
+        if (is_null($this->modelClass))   {
+            throw new InvalidConfigException('TagBehavior: property "modelClass" is not set.');
+        }
+        parent::init();
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     * @throws \yii\base\InvalidConfigException
+     */
     public function getModels()
     {
         /** @var $owner ActiveRecord */
@@ -64,6 +97,7 @@ class TagBehavior extends Behavior
     /**
      * @return int
      * @throws \yii\db\Exception
+     * @throws \yii\base\InvalidConfigException
      */
     public function getModelCount()
     {
@@ -77,6 +111,20 @@ class TagBehavior extends Behavior
             return $db->createCommand($sql)->queryScalar();
         }
         return $this->getModels()->count('*', $db);
+    }
+
+    /**
+     * @return string   tag name as link
+     * @throws \ReflectionException
+     */
+    public function getLink()
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+        $ctrl = Inflector::camel2id((new \ReflectionClass($owner))->getShortName());
+
+        return is_null($this->renderLink) ? Html::a($owner->getAttribute($this->nameAttribute), [ "/$ctrl/view", 'id' => $owner->primaryKey ] )
+            : call_user_func($this->renderLink, $owner);
     }
 
     /**

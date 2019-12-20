@@ -18,6 +18,7 @@
 namespace sjaakp\taggable;
 
 use yii\base\Behavior;
+use yii\base\InvalidConfigException;
 use yii\db\ActiveRecord;
 use yii\db\Expression;
 use yii\validators\Validator;
@@ -63,10 +64,19 @@ class TaggableBehavior extends Behavior
     public $separator = ', ';
 
     /**
-     * @var null|callable function($tag) returning tag link based on $tag
-     * If null (default): return simple HTML link.
+     * @inheritDoc
+     * @throws InvalidConfigException
      */
-    public $renderLink;
+    public function init()
+    {
+        if (is_null($this->junctionTable))   {
+            throw new InvalidConfigException('TaggableBehavior: property "junctionTable" is not set.');
+        }
+        if (is_null($this->tagClass))   {
+            throw new InvalidConfigException('TaggableBehavior: property "tagClass" is not set.');
+        }
+        parent::init();
+    }
 
     /**
      * @inheritdoc
@@ -93,13 +103,26 @@ class TaggableBehavior extends Behavior
         $modelPk = $owner->primaryKey;  // value
 
         $tc = $this->tagClass;
-        $tpk = $tc::primaryKey()[0];  // tag pk name
+        $tpk = 't.' . $tc::primaryKey()[0];  // tag pk name
 
         $tkn = new Expression($owner->db->quoteSql("{{j}}.[[{$this->tagKeyColumn}]]"));
 
-        return $tc::find()->innerJoin($this->junctionTable . ' j', [ $tpk => $tkn ])
+        return $tc::find()->alias('t')
+            ->innerJoin($this->junctionTable . ' j', [ $tpk => $tkn ])
             ->where([ "j.{$this->modelKeyColumn}" => $modelPk ])
             ->orderBy("j.{$this->orderKeyColumn}");
+    }
+
+    /**
+     * @param $name
+     * @return bool
+     */
+    public function hasTag($name)
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+
+        return ! is_null($this->getTagModels()->andWhere([ "t.{$this->nameAttribute}" => $name ])->one($owner->db));
     }
 
     /**
@@ -150,13 +173,11 @@ class TaggableBehavior extends Behavior
     {
         /* @var $owner ActiveRecord */
         $owner = $this->owner;
-        $ctrl = Inflector::camel2id((new \ReflectionClass($this->tagClass))->getShortName());
 
-        $links = array_map(function($tag) use($ctrl) {
+        $links = array_filter(array_map(function($tag) {    // filter empty links @link https://www.php.net/manual/en/function.array-filter.php
             /* @var $tag ActiveRecord */
-            return is_null($this->renderLink) ? Html::a($tag->getAttribute($this->nameAttribute), [ "/$ctrl/view", 'id' => $tag->primaryKey ] )
-                : call_user_func($this->renderLink, $tag);
-        }, $this->getTagModels()->all($owner->db));
+            return $tag->link;
+        }, $this->getTagModels()->all($owner->db)));
 
         return implode($this->separator, $links);
     }
