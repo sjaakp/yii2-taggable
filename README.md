@@ -43,7 +43,7 @@ Tag has at least the following attributes:
 - `id`: primary key;
 - `name`: to hold the actual tag keyword;
 
-#### Junction table ####
+### Junction table ###
 
 `Article` and `Tag` are linked with a junction table in a many-to-many relation. 
 Let's call the table `article_tag`. It has the following fields:
@@ -52,10 +52,10 @@ Let's call the table `article_tag`. It has the following fields:
 - `tag_id`: holds the primary key value of a `Tag`;
 - `ord`: holds the sorting order of a `Tag`.
 
-It doesn't need to have a primary key. It's a good idea to set indexes on both `model_id`
-and `tag_id`.
+The junction table doesn't need to have a primary key. 
+It's a good idea to set indexes on both `model_id` and `tag_id`.
 
-#### TaggableBehavior ####
+### TaggableBehavior ###
 
 The class `Article` is *taggable*, and should be set up like this:
 
@@ -80,7 +80,7 @@ The class `Article` is *taggable*, and should be set up like this:
 		// ...
 	}
 
-#### TagBehavior ####
+### TagBehavior ###
 
 Class `Tag` behaves as a *tag*, and looks something like this:
 
@@ -106,7 +106,25 @@ Class `Tag` behaves as a *tag*, and looks something like this:
 		// ...
 	}
 
-#### Article view ####
+After attaching **TagBehavior** the class `Tag`. gains a few new properties and methods. 
+A link to the Tag view can be obtained by:
+
+    $link = $tag->link;
+    
+`models` gets all Articles tagged by `$tag`:
+
+    $taggedArticles = $tag->models;
+    
+If you'd rather have an [ActiveDataProvider](https://www.yiiframework.com/doc/api/2.0/yii-data-activedataprovider)
+to access them, use:
+
+    $providerOfTaggedArticles = $tag->getModels();
+    
+The count of tagged Articles:
+
+    $countTaggedArticles = $tag->modelCount;         
+
+### Article view ###
 
 In the `Article` view we can now display the tags like so:
 
@@ -123,7 +141,7 @@ In the `Article` view we can now display the tags like so:
     <h4>Tags</h4>
     <p><?= $model->tagLinks ?></p>
 
-`tagLinks` is a new virtual attribute, added to `Article` by `TaggableBehavior`.
+`tagLinks` is a new virtual attribute, added to `Article` by **TaggableBehavior**.
 
 All the `Tag`s can be retrieved with:
 
@@ -137,14 +155,14 @@ use:
         'query' => $article->getTagModels()
     ]);
 
-If we want to know whether an `Article` has a `Tag` with a certain name, say 'politics',
-we can query the class like so:
+If you want to know whether an `Article` has a `Tag` with a certain name, say 'politics',
+you can query the class like so:
 
     if ($article->hasTag('politics'))   {
         // ...
     }
 
-#### Article update ####
+### Article update ###
 
 To make creating and updating `Tag`s easy, we also have to set up `TagController`:
 
@@ -170,7 +188,7 @@ To make creating and updating `Tag`s easy, we also have to set up `TagController
 		// ...
 	}
 
-#### TagEditor ####
+### TagEditor ###
 
 In the `Article`'s update and create views we can now use the **TagEditor** widget. Add something like this to `views\article\_form.php`:
 
@@ -196,7 +214,7 @@ In the `Article`'s update and create views we can now use the **TagEditor** widg
 	    ]) ?>
 		...
 
-`tags` is also a new virtual attribute of `Article`, added to it by TaggableBehavior. 
+`tags` is also a new virtual attribute of `Article`, added to it by **TaggableBehavior**. 
 `'tag/suggest'` is the base of the route to the `suggest` action in `TagController`, 
 which we defined before. Learn more about the `clientOptions` from [Pixabay](https://goodies.pixabay.com/jquery/tag-editor/demo.html).
 
@@ -212,9 +230,6 @@ Refer to the source files to see which other options are available. Some are:
   Defaults: `'tag_id'` and `'model_id'` respectively.
 - **orderColumn**: holds order information in the junction table. 
   Defined in TaggableBehavior.
-- **renderLink**: callable, `function($tag)`, returning the HTML code for a single
+- **renderLink**: callable, `function($tag, $options)`, returning the HTML code for a single
   tag link. Defined by TagBehavior. If not set (default), TagBehaviour renders
   tag link as a simple HTML a.
-
-
- 

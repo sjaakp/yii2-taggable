@@ -51,7 +51,7 @@ class TagBehavior extends Behavior
     public $nameAttribute = 'name';
 
     /**
-     * @var null|callable function($tag) returning tag link based on $tag
+     * @var null|callable function($tag, $options) returning tag link based on $tag
      * If null (default): return simple HTML link.
      */
     public $renderLink;
@@ -114,17 +114,18 @@ class TagBehavior extends Behavior
     }
 
     /**
+     * @param array $options HTML options for link
      * @return string   tag name as link
      * @throws \ReflectionException
      */
-    public function getLink()
+    public function getLink($options = [])
     {
         /* @var $owner ActiveRecord */
         $owner = $this->owner;
         $ctrl = Inflector::camel2id((new \ReflectionClass($owner))->getShortName());
 
-        return is_null($this->renderLink) ? Html::a($owner->getAttribute($this->nameAttribute), [ "/$ctrl/view", 'id' => $owner->primaryKey ] )
-            : call_user_func($this->renderLink, $owner);
+        return is_null($this->renderLink) ? Html::a($owner->getAttribute($this->nameAttribute), [ "/$ctrl/view", 'id' => $owner->primaryKey ], $options)
+            : call_user_func($this->renderLink, $owner, $options);
     }
 
     /**

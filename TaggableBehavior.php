@@ -22,8 +22,6 @@ use yii\base\InvalidConfigException;
 use yii\db\ActiveRecord;
 use yii\db\Expression;
 use yii\validators\Validator;
-use yii\helpers\Html;
-use yii\helpers\Inflector;
 
 /**
  * Class TaggableBehavior
@@ -31,6 +29,11 @@ use yii\helpers\Inflector;
  */
 class TaggableBehavior extends Behavior
 {
+    /**
+     * @var string tag names seperated by delimiter, ready for TagEditor
+     */
+    public $tags = '';
+
     /**
      * @var ActiveRecord class name of the tag record
      */
@@ -126,9 +129,40 @@ class TaggableBehavior extends Behavior
     }
 
     /**
-     * @return string   tag names separated by delimiter, ready for TagEditor
+     * @param array $linkOptions
+     * @return string   tag names as links, separated by separator
      */
-    public function getTags()
+    public function getTagLinks($linkOptions = [])
+    {
+        /* @var $owner ActiveRecord */
+        $owner = $this->owner;
+
+        $links = array_filter(array_map(function($tag) use($linkOptions) {    // filter empty links @link https://www.php.net/manual/en/function.array-filter.php
+            /* @var $tag ActiveRecord */
+            return $tag->getLink($linkOptions);
+        }, $this->getTagModels()->all($owner->db)));
+
+        return implode($this->separator, $links);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function events()
+    {
+        return [
+            ActiveRecord::EVENT_AFTER_FIND => 'afterFind',
+            ActiveRecord::EVENT_AFTER_INSERT => 'afterSave',
+            ActiveRecord::EVENT_AFTER_UPDATE => 'afterSave',
+            ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
+        ];
+    }
+
+    /**
+     * @param $event \yii\base\Event
+     * @throws \yii\db\Exception
+     */
+    public function afterFind($event)
     {
         /* @var $owner ActiveRecord */
         $owner = $this->owner;
@@ -138,18 +172,20 @@ class TaggableBehavior extends Behavior
             return $v->getAttribute($this->nameAttribute);
         }, $this->getTagModels()->all($owner->db));
 
-        return implode($this->delimiter, $names);
+        $this->tags = implode($this->delimiter, $names);
     }
 
     /**
-     * @param $tags string   tag names separated by delimiter, from TagEditor
+     * @param $event \yii\db\AfterSaveEvent
      * @throws \yii\db\Exception
      */
-    public function setTags($tags)
+    public function afterSave($event)
     {
         $this->removeTags();    // remove old tags, if any
-        $tc = $this->tagClass;
 
+        if (empty($this->tags)) return;
+
+        $tc = $this->tagClass;
         $ids = array_map(function($name) use ($tc) {
             $tag = $tc::findOne([ $this->nameAttribute => $name ] ); // does tag exist?
 
@@ -160,26 +196,18 @@ class TaggableBehavior extends Behavior
                 $tag->save();
             }
             return $tag->primaryKey;
-        }, explode($this->delimiter, $tags));
+        }, explode($this->delimiter, $this->tags));
 
         $this->insertTags($ids);
     }
 
     /**
-     * @return string   tag names as links, separated by separator
-     * @throws \ReflectionException
+     * @param $event \yii\base\Event
+     * @throws \yii\db\Exception
      */
-    public function getTagLinks()
+    public function beforeDelete($event)
     {
-        /* @var $owner ActiveRecord */
-        $owner = $this->owner;
-
-        $links = array_filter(array_map(function($tag) {    // filter empty links @link https://www.php.net/manual/en/function.array-filter.php
-            /* @var $tag ActiveRecord */
-            return $tag->link;
-        }, $this->getTagModels()->all($owner->db)));
-
-        return implode($this->separator, $links);
+        $this->removeTags();
     }
 
     /**
@@ -230,24 +258,5 @@ class TaggableBehavior extends Behavior
         ], $rows);
 
         return $db->createCommand($sql)->execute();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function events()
-    {
-        return [
-            ActiveRecord::EVENT_BEFORE_DELETE => 'beforeDelete',
-        ];
-    }
-
-    /**
-     * @param $event
-     * @throws \yii\db\Exception
-     */
-    public function beforeDelete($event)
-    {
-        $this->removeTags();
     }
 }
