@@ -22,6 +22,7 @@ use yii\base\InvalidConfigException;
 use yii\db\ActiveRecord;
 use yii\helpers\Html;
 use yii\helpers\Inflector;
+use yii\helpers\ArrayHelper;
 
 /**
  * Class TagBehavior
@@ -114,18 +115,24 @@ class TagBehavior extends Behavior
     }
 
     /**
-     * @param array $options HTML options for link
-     * @return string   tag name as link
+     * @param array $options HTML options for link; may contain 'encode' => false
+     * @return string   tag name as link, HTML encoded
      * @throws \ReflectionException
      */
     public function getLink($options = [])
     {
         /* @var $owner ActiveRecord */
         $owner = $this->owner;
-        $ctrl = Inflector::camel2id((new \ReflectionClass($owner))->getShortName());
 
-        return is_null($this->renderLink) ? Html::a($owner->getAttribute($this->nameAttribute), [ "/$ctrl/view", 'id' => $owner->primaryKey ], $options)
-            : call_user_func($this->renderLink, $owner, $options);
+        if (is_null($this->renderLink)) {
+            $name = $owner->getAttribute($this->nameAttribute);
+            $encode = ArrayHelper::remove($options, 'encode', true);
+            if ($encode) $name = Html::encode($name);
+            $ctrl = Inflector::camel2id((new \ReflectionClass($owner))->getShortName());
+
+            return Html::a($name, [ "/$ctrl/view", 'id' => $owner->primaryKey ], $options);
+        }
+        return call_user_func($this->renderLink, $owner, $options);
     }
 
     /**

@@ -129,8 +129,8 @@ class TaggableBehavior extends Behavior
     }
 
     /**
-     * @param array $linkOptions
-     * @return string   tag names as links, separated by separator
+     * @param array $linkOptions HTML options for links, may contain 'encoded' => false
+     * @return string   tag names as links, HTML encoded, separated by separator
      */
     public function getTagLinks($linkOptions = [])
     {
@@ -183,10 +183,8 @@ class TaggableBehavior extends Behavior
     {
         $this->removeTags();    // remove old tags, if any
 
-        if (empty($this->tags)) return;
-
         $tc = $this->tagClass;
-        $ids = array_map(function($name) use ($tc) {
+        $ids = array_filter(array_map(function($name) use ($tc) {
             $tag = $tc::findOne([ $this->nameAttribute => $name ] ); // does tag exist?
 
             if (is_null($tag))   {    // no, create
@@ -196,7 +194,7 @@ class TaggableBehavior extends Behavior
                 $tag->save();
             }
             return $tag->primaryKey;
-        }, explode($this->delimiter, $this->tags));
+        }, explode($this->delimiter, $this->tags)));
 
         $this->insertTags($ids);
     }
